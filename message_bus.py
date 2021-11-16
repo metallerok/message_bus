@@ -7,9 +7,19 @@ class Event:
 
 
 class HandlerABC(abc.ABC):
+    def __init__(self):
+        self._emitted_events = []
+
     @abc.abstractmethod
     def handle(self, event: Event, *args, **kwargs):
         pass
+
+    def emmit_event(self, event: Event):
+        self._emitted_events.append(event)
+
+    @property
+    def emitted_events(self) -> List[Event]:
+        return self._emitted_events
 
 
 class MessageBusABC(abc.ABC):
@@ -38,6 +48,7 @@ class MessageBus(MessageBusABC):
             for handler in self._handlers[type(event)]:
                 if issubclass(type(handler), HandlerABC):
                     result = handler.handle(event, *args, **kwargs)
+                    queue.extend(handler.emitted_events)
                 else:
                     result = handler(event, *args, **kwargs)
 
