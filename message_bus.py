@@ -27,6 +27,10 @@ class MessageBusABC(abc.ABC):
     def set_handlers(self, event: Type[Event], handlers: List[Union[Callable, HandlerABC]]):
         pass
 
+    @abc.abstractmethod
+    def handle(self, event: Event, *args, **kwargs):
+        pass
+
 
 class MessageBus(MessageBusABC):
     def __init__(self, handlers: Dict[Type[Event], List[Union[Callable, HandlerABC]]] = None):
