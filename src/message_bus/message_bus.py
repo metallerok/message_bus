@@ -1,8 +1,7 @@
 import abc
 import logging
-import events
-import commands
 import asyncio
+
 from typing import (
     Union,
     List,
@@ -12,6 +11,9 @@ from typing import (
     Any,
     Tuple,
 )
+
+from message_bus import events
+from message_bus import commands
 from message_bus.event_handlers.base import EventHandlerABC
 from message_bus.command_handlers.base import CommandHandlerABC
 from message_bus.types import Message
