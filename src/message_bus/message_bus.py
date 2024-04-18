@@ -12,9 +12,9 @@ from typing import (
     Any,
     Tuple,
 )
-from event_handlers.base import EventHandlerABC
-from command_handlers.base import CommandHandlerABC
-from types import Message
+from message_bus.event_handlers.base import EventHandlerABC
+from message_bus.command_handlers.base import CommandHandlerABC
+from message_bus.types import Message
 
 logger = logging.getLogger(__name__)
 

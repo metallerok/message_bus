@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from dataclasses_serialization.json import JSONSerializer
 from uuid import UUID
 
