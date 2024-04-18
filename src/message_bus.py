@@ -1,12 +1,20 @@
 import abc
 import logging
-from typing import Union, List, Type, Dict, Callable, Any, Tuple
+import events
+import commands
 import asyncio
-from . import events
-from . import commands
-from .event_handlers.base import EventHandlerABC
-from .command_handlers.base import CommandHandlerABC
-from .types import Message
+from typing import (
+    Union,
+    List,
+    Type,
+    Dict,
+    Callable,
+    Any,
+    Tuple,
+)
+from event_handlers.base import EventHandlerABC
+from command_handlers.base import CommandHandlerABC
+from types import Message
 
 logger = logging.getLogger(__name__)
 
