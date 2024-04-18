@@ -1,5 +1,5 @@
 from typing import Union
-import events
-import commands
+from message_bus import events
+from message_bus import commands
 
 Message = Union[events.Event, commands.Command]

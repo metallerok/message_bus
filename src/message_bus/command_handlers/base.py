@@ -1,6 +1,6 @@
 import abc
-import commands
-from types import Message
+from message_bus import commands
+from message_bus.types import Message
 from typing import List
 
 

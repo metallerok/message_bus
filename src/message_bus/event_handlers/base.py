@@ -1,7 +1,7 @@
 import abc
-import events
+from message_bus import events
+from message_bus.types import Message
 from typing import List
-from types import Message
 
 
 class EventHandlerABC(abc.ABC):
