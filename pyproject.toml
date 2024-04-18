@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = 'message_bus'
+version = "1.0.0-beta"
+requires-python = '>=3.6'
+dependencies = [
+    "dataclasses-serialization==1.3.1",
+]
