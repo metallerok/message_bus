@@ -1,1 +1,1 @@
-from message_bus import MessageBus, MessageBusABC  # noqa
+from message_bus.core import MessageBus, MessageBusABC  # noqa
