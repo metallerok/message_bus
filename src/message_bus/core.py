@@ -17,6 +17,7 @@ from message_bus import events
 from message_bus import commands
 from message_bus.event_handlers.base import EventHandlerABC
 from message_bus.command_handlers.base import CommandHandlerABC
+from message_bus.outbox_handlers.base import OutboxHandlerABC
 from message_bus.types import Message
 from message_bus.repositories.outbox import OutBoxRepoABC
 
@@ -25,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 class MessageBusABC(abc.ABC):
     context = {}
+
+    def __init__(self) -> None:
+        self._outbox_handler = None
+
+        super().__init__()
 
     @abc.abstractmethod
     def set_event_handlers(
@@ -55,6 +61,18 @@ class MessageBusABC(abc.ABC):
             command: Type[commands.Command],
     ) -> CommandHandlerABC:
         pass
+
+    def set_outbox_handler(self, handler: OutboxHandlerABC):
+        self._outbox_handler = handler
+
+    def process_outbox(self, outbox_repo: OutBoxRepoABC):
+        if self._outbox_handler is None:
+            return
+
+        outbox_messages = outbox_repo.list_unprocessed()
+
+        for outbox_message in outbox_messages:
+            self._outbox_handler.handle(outbox_message, context=self.context)
 
     @abc.abstractmethod
     def handle(self, message: Message, *args, **kwargs):

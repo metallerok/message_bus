@@ -52,3 +52,13 @@ message_bus.register_outbox_message(
 # save order ans outbox message with same transation
 db_session.commit()
 ```
+
+Your model must have these fields
+```python
+@dataclass
+class ExampleOutboxModel:
+    id: uuid.UUID
+    type: str
+    message_type: str
+    message: Message
+```
