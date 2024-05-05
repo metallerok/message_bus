@@ -10,7 +10,7 @@ class OutBoxRepoABC(abc.ABC):
         assert hasattr(outbox_message, "type")
         assert hasattr(outbox_message, "message") and isinstance(getattr(outbox_message, "message"), Message)
 
-        self.add(outbox_message)
+        self._add(outbox_message)
 
 
     @abc.abstractmethod
