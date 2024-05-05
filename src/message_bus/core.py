@@ -1,6 +1,7 @@
 import abc
 import logging
 import asyncio
+import uuid
 
 from typing import (
     Union,
@@ -17,6 +18,7 @@ from message_bus import commands
 from message_bus.event_handlers.base import EventHandlerABC
 from message_bus.command_handlers.base import CommandHandlerABC
 from message_bus.types import Message
+from message_bus.repositories.outbox import OutBoxRepoABC
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +58,31 @@ class MessageBusABC(abc.ABC):
 
     @abc.abstractmethod
     def handle(self, message: Message, *args, **kwargs):
-        pass
+        raise NotImplementedError
 
     def batch_handle(self, messages: List[Message], *args, **kwargs):
         for message in messages:
             self.handle(message, *args, **kwargs)
+
+    @classmethod
+    def register_outbox_message(cls, outbox_repo: OutBoxRepoABC, message: Message):
+        if isinstance(message, commands.Command):
+            type_ = "COMMAND"
+        elif isinstance(message, events.Event):
+            type_ = "EVENT"
+        else:
+            raise TypeError("Uknown message type")
+
+        model = outbox_repo.get_model()
+
+        outbox_message = model(
+            id=uuid.uuid4(),
+            type=type_,
+            message_type=type(message).__name__,
+            message=message,
+        )
+
+        outbox_repo.add(outbox_message)
 
 
 class MessageBus(MessageBusABC):
@@ -183,6 +205,7 @@ class MessageBus(MessageBusABC):
             "command": cmd,
             "result": result,
         }
+
 
 
 class AsyncMessageBus(MessageBusABC):
