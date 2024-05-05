@@ -62,21 +62,6 @@ class MessageBusABC(abc.ABC):
     ) -> CommandHandlerABC:
         pass
 
-    def set_outbox_handler(self, handler: OutboxHandlerABC):
-        self._outbox_handler = handler
-
-    def process_outbox(self, outbox_repo: OutBoxRepoABC):
-        if self._outbox_handler is None:
-            return
-
-        outbox_messages = outbox_repo.list_unprocessed()
-
-        for outbox_message in outbox_messages:
-            try:
-                self._outbox_handler.handle(outbox_message, context=self.context)
-            except Exception as e:
-                logger.exception(e)
-
     @abc.abstractmethod
     def handle(self, message: Message, *args, **kwargs):
         raise NotImplementedError
@@ -104,6 +89,23 @@ class MessageBusABC(abc.ABC):
         )
 
         outbox_repo.add(outbox_message)
+
+    def set_outbox_handlers(self, handlers: List[OutboxHandlerABC]):
+        self._outbox_handlers = handlers
+
+    def process_outbox(self, outbox_repo: OutBoxRepoABC):
+        if self._outbox_handler is None:
+            return
+
+        outbox_messages = outbox_repo.list_unprocessed()
+
+        for outbox_message in outbox_messages:
+            for handler in self._outbox_handlers:
+                try:
+                    handler.handle(outbox_message, context=self.context)
+                    outbox_repo.save()
+                except Exception as e:
+                    logger.exception(e)
 
 
 class MessageBus(MessageBusABC):
@@ -280,10 +282,12 @@ class AsyncMessageBus(MessageBusABC):
         outbox_messages = await outbox_repo.list_unprocessed()
 
         for outbox_message in outbox_messages:
-            try:
-                await self._outbox_handler.handle(outbox_message, context=self.context)
-            except Exception as e:
-                logger.exception(e)
+            for handler in self._outbox_handlers:
+                try:
+                    await handler.handle(outbox_message, context=self.context)
+                    await outbox_repo.save()
+                except Exception as e:
+                    logger.exception(e)
 
     async def batch_handle(self, messages: List[Message], *args, **kwargs):
         for message in messages:
