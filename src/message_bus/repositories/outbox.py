@@ -8,7 +8,7 @@ class OutBoxRepoABC(abc.ABC):
     def add(self, outbox_message):
         assert hasattr(outbox_message, "id")
         assert hasattr(outbox_message, "type")
-        assert hasattr(outbox_message, "message") and type(getattr(outbox_message, "message")) == Message
+        assert hasattr(outbox_message, "message") and isinstance(getattr(outbox_message, "message"), Message)
 
         self.add(outbox_message)
 

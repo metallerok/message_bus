@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = 'message_bus'
-version = "1.5.0-beta4"
+version = "1.5.0-beta5"
 requires-python = '>=3.6'
 dependencies = [
     "dataclasses-serialization==1.3.1",
