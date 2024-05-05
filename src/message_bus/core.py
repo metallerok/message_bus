@@ -28,7 +28,7 @@ class MessageBusABC(abc.ABC):
     context = {}
 
     def __init__(self) -> None:
-        self._outbox_handler = None
+        self._outbox_handlers: List[OutboxHandlerABC] = []
 
         super().__init__()
 
@@ -94,7 +94,7 @@ class MessageBusABC(abc.ABC):
         self._outbox_handlers = handlers
 
     def process_outbox(self, outbox_repo: OutBoxRepoABC):
-        if self._outbox_handler is None:
+        if len(self._outbox_handlers) == 0:
             return
 
         outbox_messages = outbox_repo.list_unprocessed()
@@ -276,7 +276,7 @@ class AsyncMessageBus(MessageBusABC):
         return self._command_handlers[command]
 
     async def process_outbox(self, outbox_repo: OutBoxRepoABC):
-        if self._outbox_handler is None:
+        if len(self._outbox_handlers) == 0:
             return
 
         outbox_messages = await outbox_repo.list_unprocessed()
