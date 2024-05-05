@@ -72,7 +72,10 @@ class MessageBusABC(abc.ABC):
         outbox_messages = outbox_repo.list_unprocessed()
 
         for outbox_message in outbox_messages:
-            self._outbox_handler.handle(outbox_message, context=self.context)
+            try:
+                self._outbox_handler.handle(outbox_message, context=self.context)
+            except Exception as e:
+                logger.exception(e)
 
     @abc.abstractmethod
     def handle(self, message: Message, *args, **kwargs):
