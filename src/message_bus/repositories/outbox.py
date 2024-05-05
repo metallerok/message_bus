@@ -1,13 +1,18 @@
 import abc
 import datetime as dt
-from typing import List
+from typing import List, Type
 from message_bus.types import Message
 
 
 class OutBoxRepoABC(abc.ABC):
+    @abc.abstractmethod
+    def get_model(self) -> Type:
+        raise NotImplementedError
+
     def add(self, outbox_message):
         assert hasattr(outbox_message, "id")
         assert hasattr(outbox_message, "type")
+        assert hasattr(outbox_message, "message_type")
         assert hasattr(outbox_message, "message") and isinstance(getattr(outbox_message, "message"), Message)
 
         self._add(outbox_message)
