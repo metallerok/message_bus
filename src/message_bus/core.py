@@ -273,6 +273,18 @@ class AsyncMessageBus(MessageBusABC):
     ) -> CommandHandlerABC:
         return self._command_handlers[command]
 
+    async def process_outbox(self, outbox_repo: OutBoxRepoABC):
+        if self._outbox_handler is None:
+            return
+
+        outbox_messages = await outbox_repo.list_unprocessed()
+
+        for outbox_message in outbox_messages:
+            try:
+                await self._outbox_handler.handle(outbox_message, context=self.context)
+            except Exception as e:
+                logger.exception(e)
+
     async def batch_handle(self, messages: List[Message], *args, **kwargs):
         for message in messages:
             await self.handle(message, *kwargs, **kwargs)

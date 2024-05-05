@@ -25,3 +25,7 @@ class OutBoxRepoABC(abc.ABC):
     @abc.abstractmethod
     def list_unprocessed(self) -> List:
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def save(self):
+        raise NotImplementedError
