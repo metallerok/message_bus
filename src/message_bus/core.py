@@ -281,7 +281,12 @@ class AsyncMessageBus(MessageBusABC):
                 logger.exception(f"Error handling event {event}", exc_info=e)
                 continue
 
-        results = await asyncio.gather(*coroutines)
+        try:
+            results = tuple(await asyncio.gather(*coroutines))
+        except Exception as e:
+            logger.exception(f"Error handling events", exc_info=e)
+            return tuple()
+
 
         if "db_session" in self.context:
             self.context["db_session"].close()
