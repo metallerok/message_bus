@@ -126,6 +126,8 @@ class MessageBus(MessageBusABC):
 
         self.context = {}
 
+        super().__init__()
+
     def set_event_handlers(
             self,
             event: Type[events.Event],
@@ -248,6 +250,8 @@ class AsyncMessageBus(MessageBusABC):
             self._command_handlers = dict()
 
         self.context = {}
+
+        super().__init__()
 
     def set_event_handlers(
             self,
