@@ -1,6 +1,6 @@
 import abc
 import datetime as dt
-from typing import List, Type
+from typing import List, Type, Any
 from message_bus.types import Message
 
 
@@ -20,6 +20,10 @@ class OutBoxRepoABC(abc.ABC):
 
     @abc.abstractmethod
     def _add(self, outbox_message):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get(self, id) -> Any:
         raise NotImplementedError
 
     @abc.abstractmethod
