@@ -30,6 +30,8 @@ class SAOutBoxRepo(OutBoxRepoABC):
     async def list_unprocessed(self) -> List:
         query = sa.select(
             OutBox
+        ).filter(
+            OutBox.processed.is_(None),
         ).with_for_update()
 
         result = await self._db_session.execute(query)

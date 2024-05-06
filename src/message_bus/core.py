@@ -71,7 +71,7 @@ class MessageBusABC(abc.ABC):
             self.handle(message, *args, **kwargs)
 
     @classmethod
-    def register_outbox_message(cls, outbox_repo: OutBoxRepoABC, message: Message):
+    def register_outbox_message(cls, outbox_repo: OutBoxRepoABC, message: Message) -> Any:
         if isinstance(message, commands.Command):
             type_ = "COMMAND"
         elif isinstance(message, events.Event):
@@ -90,6 +90,8 @@ class MessageBusABC(abc.ABC):
 
         outbox_repo.add(outbox_message)
 
+        return outbox_message
+
     def set_outbox_handlers(self, handlers: List[OutboxHandlerABC]):
         self._outbox_handlers = handlers
 
@@ -106,6 +108,7 @@ class MessageBusABC(abc.ABC):
                     outbox_repo.save()
                 except Exception as e:
                     logger.exception(e)
+                    break
 
 
 class MessageBus(MessageBusABC):
@@ -292,6 +295,7 @@ class AsyncMessageBus(MessageBusABC):
                     await outbox_repo.save()
                 except Exception as e:
                     logger.exception(e)
+                    break
 
     async def batch_handle(self, messages: List[Message], *args, **kwargs):
         for message in messages:
