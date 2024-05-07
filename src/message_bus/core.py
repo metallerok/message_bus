@@ -1,6 +1,7 @@
 import abc
 import logging
 import asyncio
+from typing_extensions import Optional
 import uuid
 
 from typing import (
@@ -71,7 +72,12 @@ class MessageBusABC(abc.ABC):
             self.handle(message, *args, **kwargs)
 
     @classmethod
-    def register_outbox_message(cls, outbox_repo: OutBoxRepoABC, message: Message) -> Any:
+    def register_outbox_message(
+        cls,
+        outbox_repo: OutBoxRepoABC,
+        message: Message,
+        meta: Optional[dict] = None
+    ) -> Any:
         if isinstance(message, commands.Command):
             type_ = "COMMAND"
         elif isinstance(message, events.Event):
@@ -87,6 +93,9 @@ class MessageBusABC(abc.ABC):
             message_type=type(message).__name__,
             message=message,
         )
+
+        if hasattr(model, "meta"):
+            setattr(model, "meta", meta)
 
         outbox_repo.add(outbox_message)
 
@@ -235,7 +244,6 @@ class MessageBus(MessageBusABC):
         }
 
 
-
 class AsyncMessageBus(MessageBusABC):
     def __init__(
             self,
@@ -352,9 +360,8 @@ class AsyncMessageBus(MessageBusABC):
         try:
             results = tuple(await asyncio.gather(*coroutines))
         except Exception as e:
-            logger.exception(f"Error handling events", exc_info=e)
+            logger.exception("Error handling events", exc_info=e)
             return tuple()
-
 
         if "db_session" in self.context:
             self.context["db_session"].close()

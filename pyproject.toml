@@ -5,8 +5,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = 'message_bus'
-version = "1.6.0"
+version = "1.7.0"
 requires-python = '>=3.6'
 dependencies = [
     "dataclasses-serialization==1.3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyflakes==2.3.0",
+    "pytest==7.0.0",
+    "pytest-flake8==1.0.7",
+    "pytest-flakes~=4.0.5",
 ]

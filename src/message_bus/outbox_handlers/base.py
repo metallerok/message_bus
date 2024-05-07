@@ -1,7 +1,4 @@
 import abc
-from message_bus import events
-from message_bus.types import Message
-from typing import List
 
 
 class OutboxHandlerABC(abc.ABC):

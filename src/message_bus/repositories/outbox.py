@@ -1,5 +1,4 @@
 import abc
-import datetime as dt
 from typing import List, Type, Any
 from message_bus.types import Message
 
@@ -16,7 +15,6 @@ class OutBoxRepoABC(abc.ABC):
         assert hasattr(outbox_message, "message") and isinstance(getattr(outbox_message, "message"), Message)
 
         self._add(outbox_message)
-
 
     @abc.abstractmethod
     def _add(self, outbox_message):

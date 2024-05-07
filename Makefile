@@ -4,3 +4,9 @@ CONTAINER_NAME = car-plate-recognizer
 
 install:
 	$(PYTHON) -m pip install -e .
+
+install_dev:
+	$(PYTHON) -m pip install -e .[dev]
+
+test:
+	$(PYTHON) -m pytest -x -s -vv
