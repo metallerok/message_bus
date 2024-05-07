@@ -95,7 +95,7 @@ class MessageBusABC(abc.ABC):
         )
 
         if hasattr(model, "meta"):
-            setattr(model, "meta", meta)
+            setattr(outbox_message, "meta", meta)
 
         outbox_repo.add(outbox_message)
 
