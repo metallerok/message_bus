@@ -90,8 +90,8 @@ class MessageBusABC(abc.ABC):
         outbox_message = model(
             id=uuid.uuid4(),
             type=type_,
-            message_type=type(message).__name__,
-            message=message,
+            message=type(message).__name__,
+            payload=message.serialize(),
         )
 
         if hasattr(model, "meta"):
