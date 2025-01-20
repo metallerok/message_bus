@@ -1,6 +1,5 @@
 import abc
 from typing import List, Type, Any
-from message_bus.types import Message
 
 
 class OutBoxRepoABC(abc.ABC):
@@ -11,8 +10,8 @@ class OutBoxRepoABC(abc.ABC):
     def add(self, outbox_message):
         assert hasattr(outbox_message, "id")
         assert hasattr(outbox_message, "type")
-        assert hasattr(outbox_message, "message_type")
-        assert hasattr(outbox_message, "message") and isinstance(getattr(outbox_message, "message"), Message)
+        assert hasattr(outbox_message, "message")
+        assert hasattr(outbox_message, "payload")
 
         self._add(outbox_message)
 
