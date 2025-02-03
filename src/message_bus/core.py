@@ -307,7 +307,7 @@ class AsyncMessageBus(MessageBusABC):
 
     async def batch_handle(self, messages: List[Message], *args, **kwargs):
         for message in messages:
-            await self.handle(message, *kwargs, **kwargs)
+            await self.handle(message, *args, **kwargs)
 
     async def handle(self, message: Message, *args, **kwargs) -> List:
         results = []
