@@ -13,6 +13,9 @@ serializer.deserialization_functions[dt.date] = lambda _, x: dt.date.fromisoform
 serializer.serialization_functions[dt.datetime] = lambda x: x.isoformat()
 serializer.deserialization_functions[dt.datetime] = lambda _, x: dt.datetime.fromisoformat(x)
 
+serializer.serialization_functions[set] = lambda v: list(v)
+serializer.deserialization_functions[set] = lambda _, v: set(v)
+
 
 class Message:
     def serialize(self) -> dict:
