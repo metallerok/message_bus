@@ -306,8 +306,18 @@ class AsyncMessageBus(MessageBusABC):
                     break
 
     async def batch_handle(self, messages: List[Message], *args, **kwargs):
-        for message in messages:
-            await self.handle(message, *args, **kwargs)
+        try:
+            coroutines = [self.handle(message, *args, **kwargs) for message in messages]
+            results = await asyncio.gather(*coroutines, return_exceptions=True)
+
+            for message, result in zip(messages, results):
+                if isinstance(result, Exception):
+                    logger.error(f"Error processing message {message}: {str(result)}")
+
+            return [r for r in results if not isinstance(r, Exception)]
+        except Exception as e:
+            logger.exception(f"Error in batch_handle: {str(e)}")
+            return []
 
     async def handle(self, message: Message, *args, **kwargs) -> List:
         results = []
