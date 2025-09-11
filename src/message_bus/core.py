@@ -20,7 +20,7 @@ from message_bus.event_handlers.base import EventHandlerABC
 from message_bus.command_handlers.base import CommandHandlerABC
 from message_bus.outbox_handlers.base import OutboxHandlerABC
 from message_bus.types import Message
-from message_bus.repositories.outbox import OutBoxRepoABC
+from message_bus.repositories.outbox import OutBoxRepoABC, AsyncOutBoxRepoABC
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class MessageBusABC(abc.ABC):
     def get_command_handler(
             self,
             command: Type[commands.Command],
-    ) -> CommandHandlerABC:
+    ) -> Optional[CommandHandlerABC]:
         pass
 
     @abc.abstractmethod
@@ -76,6 +76,7 @@ class MessageBusABC(abc.ABC):
         cls,
         outbox_repo: OutBoxRepoABC,
         message: Message,
+        id: Optional[uuid.UUID] = None,
         meta: Optional[dict] = None
     ) -> Any:
         if isinstance(message, commands.Command):
@@ -88,7 +89,7 @@ class MessageBusABC(abc.ABC):
         model = outbox_repo.get_model()
 
         outbox_message = model(
-            id=uuid.uuid4(),
+            id=id or uuid.uuid4(),
             type=type_,
             message=type(message).__name__,
             payload=message.serialize(),
@@ -120,11 +121,107 @@ class MessageBusABC(abc.ABC):
                     break
 
 
+class AsyncMessageBusABC(abc.ABC):
+    context = {}
+
+    def __init__(self) -> None:
+        self._outbox_handlers: List[OutboxHandlerABC] = []
+
+        super().__init__()
+
+    @abc.abstractmethod
+    def set_event_handlers(
+            self,
+            event: Type[events.Event],
+            handlers: List[Union[Callable, EventHandlerABC]],
+    ):
+        pass
+
+    @abc.abstractmethod
+    def get_event_handlers(
+            self,
+            event: Type[events.Event],
+    ) -> List[Union[Callable, EventHandlerABC]]:
+        pass
+
+    @abc.abstractmethod
+    def set_command_handler(
+            self,
+            cmd: Type[commands.Command],
+            handler: Union[Callable, CommandHandlerABC],
+    ):
+        pass
+
+    @abc.abstractmethod
+    def get_command_handler(
+            self,
+            command: Type[commands.Command],
+    ) -> Optional[CommandHandlerABC]:
+        pass
+
+    @abc.abstractmethod
+    async def handle(self, message: Message, *args, **kwargs):
+        raise NotImplementedError
+
+    async def batch_handle(self, messages: List[Message], *args, **kwargs):
+        for message in messages:
+            await self.handle(message, *args, **kwargs)
+
+    @classmethod
+    def register_outbox_message(
+        cls,
+        outbox_repo: AsyncOutBoxRepoABC,
+        message: Message,
+        id: Optional[uuid.UUID] = None,
+        meta: Optional[dict] = None
+    ) -> Any:
+        if isinstance(message, commands.Command):
+            type_ = "COMMAND"
+        elif isinstance(message, events.Event):
+            type_ = "EVENT"
+        else:
+            raise TypeError("Uknown message type")
+
+        model = outbox_repo.get_model()
+
+        outbox_message = model(
+            id=id or uuid.uuid4(),
+            type=type_,
+            message=type(message).__name__,
+            payload=message.serialize(),
+        )
+
+        if hasattr(model, "meta"):
+            setattr(outbox_message, "meta", meta)
+
+        outbox_repo.add(outbox_message)
+
+        return outbox_message
+
+    def set_outbox_handlers(self, handlers: List[OutboxHandlerABC]):
+        self._outbox_handlers = handlers
+
+    async def process_outbox(self, outbox_repo: OutBoxRepoABC):
+        if len(self._outbox_handlers) == 0:
+            return
+
+        outbox_messages = outbox_repo.list_unprocessed()
+
+        for outbox_message in outbox_messages:
+            for handler in self._outbox_handlers:
+                try:
+                    handler.handle(outbox_message, context=self.context)
+                    outbox_repo.save()
+                except Exception as e:
+                    logger.exception(e)
+                    break
+
+
 class MessageBus(MessageBusABC):
     def __init__(
             self,
-            event_handlers: Dict[Type[events.Event], List[Union[Callable, EventHandlerABC]]] = None,
-            command_handlers: Dict[Type[commands.Command], Union[Callable, CommandHandlerABC]] = None,
+            event_handlers: Optional[Dict[Type[events.Event], List[Union[Callable, EventHandlerABC]]]] = None,
+            command_handlers: Optional[Dict[Type[commands.Command], Union[Callable, CommandHandlerABC]]] = None,
     ):
         if event_handlers:
             self._event_handlers = event_handlers
@@ -151,13 +248,13 @@ class MessageBus(MessageBusABC):
             self,
             event: Type[events.Event],
     ) -> List[Union[Callable, EventHandlerABC]]:
-        return self._event_handlers[event]
+        return self._event_handlers.get(event, [])
 
     def get_command_handler(
             self,
             command: Type[commands.Command],
-    ) -> CommandHandlerABC:
-        return self._command_handlers[command]
+    ) -> Optional[CommandHandlerABC]:
+        return self._command_handlers.get(command)
 
     def set_command_handler(
             self,
@@ -227,7 +324,9 @@ class MessageBus(MessageBusABC):
         logger.debug(f"Handling command {cmd}")
 
         try:
-            handler = self._command_handlers[type(cmd)]
+            handler = self._command_handlers.get(type(cmd))
+
+            assert handler, f"Handler for {type(cmd)} not found"
 
             if issubclass(type(handler), CommandHandlerABC):
                 result = handler.handle(cmd, context=self.context, *args, **kwargs)
@@ -244,11 +343,11 @@ class MessageBus(MessageBusABC):
         }
 
 
-class AsyncMessageBus(MessageBusABC):
+class AsyncMessageBus(AsyncMessageBusABC):
     def __init__(
             self,
-            event_handlers: Dict[Type[events.Event], List[Union[Callable, EventHandlerABC]]] = None,
-            command_handlers: Dict[Type[commands.Command], Union[Callable, CommandHandlerABC]] = None,
+            event_handlers: Optional[Dict[Type[events.Event], List[Union[Callable, EventHandlerABC]]]] = None,
+            command_handlers: Optional[Dict[Type[commands.Command], Union[Callable, CommandHandlerABC]]] = None,
     ):
         if event_handlers:
             self._event_handlers = event_handlers
@@ -282,15 +381,15 @@ class AsyncMessageBus(MessageBusABC):
             self,
             event: Type[events.Event],
     ) -> List[Union[Callable, EventHandlerABC]]:
-        return self._event_handlers[event]
+        return self._event_handlers.get(event, [])
 
     def get_command_handler(
             self,
             command: Type[commands.Command],
-    ) -> CommandHandlerABC:
-        return self._command_handlers[command]
+    ) -> Optional[CommandHandlerABC]:
+        return self._command_handlers.get(command)
 
-    async def process_outbox(self, outbox_repo: OutBoxRepoABC):
+    async def process_outbox(self, outbox_repo: AsyncOutBoxRepoABC):
         if len(self._outbox_handlers) == 0:
             return
 
