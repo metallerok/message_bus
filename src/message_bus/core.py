@@ -163,9 +163,12 @@ class AsyncMessageBusABC(abc.ABC):
     async def handle(self, message: Message, *args, **kwargs):
         raise NotImplementedError
 
-    async def batch_handle(self, messages: List[Message], *args, **kwargs):
+    async def batch_handle(self, messages: List[Message], *args, **kwargs) -> List:
+        results = []
         for message in messages:
-            await self.handle(message, *args, **kwargs)
+            result = await self.handle(message, *args, **kwargs)
+            results.append(result)
+        return results
 
     @classmethod
     def register_outbox_message(
@@ -404,19 +407,41 @@ class AsyncMessageBus(AsyncMessageBusABC):
                     logger.exception(e)
                     break
 
-    async def batch_handle(self, messages: List[Message], *args, **kwargs):
+    async def batch_handle(self, messages: List[Message], *args, **kwargs) -> List:
+        max_concurrency = kwargs.pop("max_concurrency", 10)
+        q: asyncio.Queue[Tuple[int, Any]] = asyncio.Queue()
+        results: List[Any] = [None] * len(messages)
+
+        for idx, msg in enumerate(messages):
+            q.put_nowait((idx, msg))
+
+        async def worker():
+            while True:
+                try:
+                    idx, msg = await q.get()
+                except asyncio.CancelledError:
+                    break
+                try:
+                    res = await self.handle(msg, *args, **kwargs)
+                    results[idx] = res
+                except Exception as e:
+                    results[idx] = e
+                finally:
+                    q.task_done()
+
+        workers = [asyncio.create_task(worker()) for _ in range(max_concurrency)]
         try:
-            coroutines = [self.handle(message, *args, **kwargs) for message in messages]
-            results = await asyncio.gather(*coroutines, return_exceptions=True)
+            await q.join()
+        finally:
+            for w in workers:
+                w.cancel()
+            await asyncio.gather(*workers, return_exceptions=True)
 
-            for message, result in zip(messages, results):
-                if isinstance(result, Exception):
-                    logger.error(f"Error processing message {message}: {str(result)}")
+        for msg, res in zip(messages, results):
+            if isinstance(res, Exception):
+                logger.error("Error processing message %r: %s", msg, res)
 
-            return [r for r in results if not isinstance(r, Exception)]
-        except Exception as e:
-            logger.exception(f"Error in batch_handle: {str(e)}")
-            return []
+        return [r for r in results if not isinstance(r, Exception)]
 
     async def handle(self, message: Message, *args, **kwargs) -> List:
         results = []
