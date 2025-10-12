@@ -1,19 +1,14 @@
-# Message Bus
-
-A flexible message bus system for handling commands, events, and outbox patterns in Python applications.
+# Message Bus Documentation
 
 ## Overview
 
-The Message Bus is a design pattern implementation that provides a way to handle commands and events in an application. It supports both synchronous and asynchronous operations, with built-in support for the outbox pattern to ensure message persistence before processing.
+The Message Bus is a flexible command and event handling system that provides:
 
-## Key Features
-
-- **Command/Event Handling**: Process commands and events with dedicated handlers
+- **Command/Event Processing**: Handle business logic through commands and events
 - **Synchronous & Asynchronous Support**: Both sync and async implementations available
 - **Outbox Pattern Integration**: Automatically persist messages to outbox before processing
-- **Message Serialization**: Built-in serialization using dataclasses_serialization
-- **Handler Composition**: Support for emitting new messages from handlers
 - **Transaction Safety**: Ensure message persistence within database transactions
+- **Handler Composition**: Support for emitting new messages from handlers
 
 ## Architecture
 
@@ -28,11 +23,11 @@ The Message Bus is a design pattern implementation that provides a way to handle
 
 ### Message Types
 
-- **Command**: Represents an action to be performed
-- **Event**: Represents something that happened in the system
+- **Command**: Represents an action to be performed (e.g., "CreateOrder")
+- **Event**: Represents something that happened in the system (e.g., "OrderCreated")
 - **Outbox Message**: A persisted version of commands/events for processing
 
-## Usage Examples
+## Quick Start
 
 ### Basic Setup
 
@@ -232,6 +227,44 @@ class MyOutboxHandler(OutboxHandlerABC):
 2. **Background Processing**: Process outbox messages in background jobs or separate processes
 3. **Error Handling**: Implement proper error handling in outbox handlers to avoid message loss
 4. **Idempotency**: Design handlers to be idempotent since messages may be retried
+
+## Core Features
+
+### Message Serialization
+
+The system uses `dataclasses_serialization` for serializing messages to/from database format:
+
+```python
+from message_bus.types import Message
+
+class MyMessage(Message):
+    name: str
+    value: int
+
+    def serialize(self) -> dict:
+        return super().serialize()
+
+    @classmethod
+    def deserialize(cls, data: dict) -> 'MyMessage':
+        return super().deserialize(data)
+```
+
+### Context Support
+
+All handlers have access to a shared context:
+
+```python
+message_bus.context["db_session"] = session
+result = message_bus.handle(my_command)
+```
+
+### Batch Processing
+
+```python
+# Process multiple messages at once
+messages = [cmd1, cmd2, cmd3]
+results = message_bus.batch_handle(messages)
+```
 
 ## License
 

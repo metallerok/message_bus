@@ -5,8 +5,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = 'message_bus'
-version = "1.15.0"
-requires-python = '>=3.6'
+version = "1.16.0"
+description = "A flexible message bus system for handling commands, events, and outbox patterns in Python applications"
+readme = "readme.md"
+license = {text = "MIT"}
+requires-python = '>=3.7'
 dependencies = [
     "dataclasses-serialization==1.3.1",
 ]
