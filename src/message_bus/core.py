@@ -343,7 +343,7 @@ class AsyncMessageBusABC(abc.ABC):
         Returns:
             List of results from handling all messages
         """
-        max_concurrency = kwargs.pop("max_concurrency", 10)
+        max_concurrency = kwargs.pop("max_concurrency", 5)
         q: asyncio.Queue[Tuple[int, Any]] = asyncio.Queue()
         results: List[Any] = [None] * len(messages)
 
@@ -821,7 +821,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
         Returns:
             List of results from handling all messages
         """
-        max_concurrency = kwargs.pop("max_concurrency", 10)
+        max_concurrency = kwargs.pop("max_concurrency", 5)
         q: asyncio.Queue[Tuple[int, Any]] = asyncio.Queue()
         results: List[Any] = [None] * len(messages)
 
