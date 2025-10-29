@@ -16,8 +16,8 @@ from typing import (
 
 from message_bus import events
 from message_bus import commands
-from message_bus.event_handlers.base import EventHandlerABC
-from message_bus.command_handlers.base import CommandHandlerABC
+from message_bus.event_handlers.base import AsyncEventHandlerABC, EventHandlerABC
+from message_bus.command_handlers.base import AsyncCommandHandlerABC, CommandHandlerABC
 from message_bus.outbox_handlers.base import OutboxHandlerABC, AsyncOutboxHandlerABC
 from message_bus.types import Message
 from message_bus.repositories.outbox import OutBoxRepoABC, AsyncOutBoxRepoABC
@@ -258,7 +258,7 @@ class AsyncMessageBusABC(abc.ABC):
     def set_event_handlers(
             self,
             event: Type[events.Event],
-            handlers: List[Union[Callable, EventHandlerABC]],
+            handlers: List[Union[Callable, AsyncEventHandlerABC]],
     ) -> None:
         """
         Register event handlers for a specific event type.
@@ -273,7 +273,7 @@ class AsyncMessageBusABC(abc.ABC):
     def get_event_handlers(
             self,
             event: Type[events.Event],
-    ) -> List[Union[Callable, EventHandlerABC]]:
+    ) -> List[Union[Callable, AsyncEventHandlerABC]]:
         """
         Get registered event handlers for a specific event type.
 
@@ -289,7 +289,7 @@ class AsyncMessageBusABC(abc.ABC):
     def set_command_handler(
             self,
             cmd: Type[commands.Command],
-            handler: Union[Callable, CommandHandlerABC],
+            handler: Union[Callable, AsyncCommandHandlerABC],
     ) -> None:
         """
         Register a handler for a specific command type.
@@ -304,7 +304,7 @@ class AsyncMessageBusABC(abc.ABC):
     def get_command_handler(
         self,
         command: Type[commands.Command],
-    ) -> Optional[Union[Callable, CommandHandlerABC]]:
+    ) -> Optional[Union[Callable, AsyncCommandHandlerABC]]:
         """
         Get registered handler for a specific command type.
 
@@ -703,8 +703,8 @@ class AsyncMessageBus(AsyncMessageBusABC):
 
     def __init__(
             self,
-            event_handlers: Optional[Dict[Type[events.Event], List[Union[Callable, EventHandlerABC]]]] = None,
-            command_handlers: Optional[Dict[Type[commands.Command], Union[Callable, CommandHandlerABC]]] = None,
+            event_handlers: Optional[Dict[Type[events.Event], List[Union[Callable, AsyncEventHandlerABC]]]] = None,
+            command_handlers: Optional[Dict[Type[commands.Command], Union[Callable, AsyncCommandHandlerABC]]] = None,
     ):
         """
         Initialize the async message bus with optional pre-configured handlers.
@@ -730,7 +730,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
     def set_event_handlers(
             self,
             event: Type[events.Event],
-            handlers: List[Union[Callable, EventHandlerABC]]
+            handlers: List[Union[Callable, AsyncEventHandlerABC]]
     ) -> None:
         """
         Register event handlers for a specific event type.
@@ -744,7 +744,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
     def set_command_handler(
             self,
             cmd: Type[commands.Command],
-            handler: Union[Callable, CommandHandlerABC],
+            handler: Union[Callable, AsyncCommandHandlerABC],
     ) -> None:
         """
         Register a handler for a specific command type.
@@ -758,7 +758,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
     def get_event_handlers(
             self,
             event: Type[events.Event],
-    ) -> List[Union[Callable, EventHandlerABC]]:
+    ) -> List[Union[Callable, AsyncEventHandlerABC]]:
         """
         Get registered event handlers for a specific event type.
 
@@ -773,7 +773,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
     def get_command_handler(
             self,
             command: Type[commands.Command],
-    ) -> Optional[Union[Callable, CommandHandlerABC]]:
+    ) -> Optional[Union[Callable, AsyncCommandHandlerABC]]:
         """
         Get registered handler for a specific command type.
 
@@ -909,13 +909,13 @@ class AsyncMessageBus(AsyncMessageBusABC):
             handlers = self._event_handlers[type(event)]
         except KeyError:
             logger.error(f"Event handlers for {type(event)} does not exist")
-            return tuple()
+            return tuple([])
 
         for handler in handlers:
             logger.debug(f"Handling event {event} with handler {handler}")
 
             try:
-                if isinstance(handler, EventHandlerABC):
+                if isinstance(handler, AsyncEventHandlerABC):
                     coroutine = handler.handle(event, context=self.context, *args, **kwargs)
                     coroutines.append(coroutine)
                     queue.extend(handler.emitted_messages)
@@ -931,7 +931,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
             results = tuple(await asyncio.gather(*coroutines))
         except Exception as e:
             logger.exception("Error handling events", exc_info=e)
-            return tuple()
+            return tuple([])
 
         if "db_session" in self.context:
             self.context["db_session"].close()
@@ -961,7 +961,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
         try:
             handler = self._command_handlers[type(cmd)]
 
-            if isinstance(handler, CommandHandlerABC):
+            if isinstance(handler, AsyncCommandHandlerABC):
                 result = handler.handle(cmd, context=self.context, *args, **kwargs)
                 queue.extend(handler.emitted_messages)
             else:
