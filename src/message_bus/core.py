@@ -934,7 +934,10 @@ class AsyncMessageBus(AsyncMessageBusABC):
             return tuple([])
 
         if "db_session" in self.context:
-            self.context["db_session"].close()
+            if asyncio.iscoroutinefunction(self.context["db_session"].close):
+                await self.context["db_session"].close()
+            else:
+                self.context["db_session"].close()
 
         return results
 
