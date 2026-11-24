@@ -207,8 +207,11 @@ class MessageBusABC(abc.ABC):
         """
         Process all unprocessed messages from the outbox repository.
 
-        This method should be called periodically to process messages that have been
-        persisted to the outbox but not yet processed.
+        Messages are fetched one at a time and the row lock is held only while
+        the message is being published: the "processed" mark and the lock
+        release happen in the same commit. This prevents concurrent
+        process_outbox runs (SELECT ... FOR UPDATE SKIP LOCKED) from
+        publishing the same outbox row twice.
 
         Args:
             outbox_repo: Repository containing outbox messages to process
@@ -216,16 +219,23 @@ class MessageBusABC(abc.ABC):
         if len(self._outbox_handlers) == 0:
             return
 
-        outbox_messages = outbox_repo.list_unprocessed()
+        failed_ids: List[Any] = []
 
-        for outbox_message in outbox_messages:
-            for handler in self._outbox_handlers:
-                try:
+        while True:
+            batch = outbox_repo.list_unprocessed(limit=1, exclude_ids=failed_ids)
+            if not batch:
+                break
+
+            outbox_message = batch[0]
+
+            try:
+                for handler in self._outbox_handlers:
                     handler.handle(outbox_message, context=self.context)
-                    outbox_repo.save()
-                except Exception as e:
-                    logger.exception(e)
-                    break
+                outbox_repo.save()
+            except Exception as e:
+                logger.exception(e)
+                outbox_repo.rollback()
+                failed_ids.append(outbox_message.id)
 
 
 class AsyncMessageBusABC(abc.ABC):
@@ -437,8 +447,11 @@ class AsyncMessageBusABC(abc.ABC):
         """
         Process all unprocessed messages from the outbox repository asynchronously.
 
-        This method should be called periodically to process messages that have been
-        persisted to the outbox but not yet processed.
+        Messages are fetched one at a time and the row lock is held only while
+        the message is being published: the "processed" mark and the lock
+        release happen in the same commit. This prevents concurrent
+        process_outbox runs (SELECT ... FOR UPDATE SKIP LOCKED) from
+        publishing the same outbox row twice.
 
         Args:
             outbox_repo: Repository containing outbox messages to process
@@ -446,16 +459,23 @@ class AsyncMessageBusABC(abc.ABC):
         if len(self._outbox_handlers) == 0:
             return
 
-        outbox_messages = await outbox_repo.list_unprocessed()
+        failed_ids: List[Any] = []
 
-        for outbox_message in outbox_messages:
-            for handler in self._outbox_handlers:
-                try:
+        while True:
+            batch = await outbox_repo.list_unprocessed(limit=1, exclude_ids=failed_ids)
+            if not batch:
+                break
+
+            outbox_message = batch[0]
+
+            try:
+                for handler in self._outbox_handlers:
                     await handler.handle(outbox_message, context=self.context)
-                    outbox_repo.save()
-                except Exception as e:
-                    logger.exception(e)
-                    break
+                await outbox_repo.save()
+            except Exception as e:
+                logger.exception(e)
+                await outbox_repo.rollback()
+                failed_ids.append(outbox_message.id)
 
 
 class MessageBus(MessageBusABC):
@@ -789,8 +809,11 @@ class AsyncMessageBus(AsyncMessageBusABC):
         """
         Process all unprocessed messages from the outbox repository asynchronously.
 
-        This method should be called periodically to process messages that have been
-        persisted to the outbox but not yet processed.
+        Messages are fetched one at a time and the row lock is held only while
+        the message is being published: the "processed" mark and the lock
+        release happen in the same commit. This prevents concurrent
+        process_outbox runs (SELECT ... FOR UPDATE SKIP LOCKED) from
+        publishing the same outbox row twice.
 
         Args:
             outbox_repo: Repository containing outbox messages to process
@@ -798,16 +821,23 @@ class AsyncMessageBus(AsyncMessageBusABC):
         if len(self._outbox_handlers) == 0:
             return
 
-        outbox_messages = await outbox_repo.list_unprocessed()
+        failed_ids: List[Any] = []
 
-        for outbox_message in outbox_messages:
-            for handler in self._outbox_handlers:
-                try:
+        while True:
+            batch = await outbox_repo.list_unprocessed(limit=1, exclude_ids=failed_ids)
+            if not batch:
+                break
+
+            outbox_message = batch[0]
+
+            try:
+                for handler in self._outbox_handlers:
                     await handler.handle(outbox_message, context=self.context)
-                    await outbox_repo.save()
-                except Exception as e:
-                    logger.exception(e)
-                    break
+                await outbox_repo.save()
+            except Exception as e:
+                logger.exception(e)
+                await outbox_repo.rollback()
+                failed_ids.append(outbox_message.id)
 
     async def batch_handle(self, messages: List[Message], *args, **kwargs) -> List:
         """

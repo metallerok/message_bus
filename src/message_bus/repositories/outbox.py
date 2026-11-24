@@ -1,5 +1,5 @@
 import abc
-from typing import List, Type, Any
+from typing import Any, List, Optional, Type
 
 
 class OutBoxRepoABC(abc.ABC):
@@ -24,7 +24,22 @@ class OutBoxRepoABC(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def list_unprocessed(self) -> List:
+    def list_unprocessed(
+            self,
+            limit: Optional[int] = None,
+            exclude_ids: Optional[List[Any]] = None,
+    ) -> List:
+        """
+        Return unprocessed outbox messages.
+
+        Implementations must lock returned rows (SELECT ... FOR UPDATE
+        SKIP LOCKED); the lock is held until save() or rollback().
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def rollback(self):
+        """Release row locks and discard partial changes of a failed publish."""
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -54,7 +69,22 @@ class AsyncOutBoxRepoABC(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def list_unprocessed(self) -> List:
+    async def list_unprocessed(
+            self,
+            limit: Optional[int] = None,
+            exclude_ids: Optional[List[Any]] = None,
+    ) -> List:
+        """
+        Return unprocessed outbox messages.
+
+        Implementations must lock returned rows (SELECT ... FOR UPDATE
+        SKIP LOCKED); the lock is held until save() or rollback().
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def rollback(self):
+        """Release row locks and discard partial changes of a failed publish."""
         raise NotImplementedError
 
     @abc.abstractmethod
