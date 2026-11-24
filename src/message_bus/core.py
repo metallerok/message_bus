@@ -227,6 +227,7 @@ class MessageBusABC(abc.ABC):
                 break
 
             outbox_message = batch[0]
+            outbox_message_id = outbox_message.id
 
             try:
                 for handler in self._outbox_handlers:
@@ -235,7 +236,7 @@ class MessageBusABC(abc.ABC):
             except Exception as e:
                 logger.exception(e)
                 outbox_repo.rollback()
-                failed_ids.append(outbox_message.id)
+                failed_ids.append(outbox_message_id)
 
 
 class AsyncMessageBusABC(abc.ABC):
@@ -467,6 +468,7 @@ class AsyncMessageBusABC(abc.ABC):
                 break
 
             outbox_message = batch[0]
+            outbox_message_id = outbox_message.id
 
             try:
                 for handler in self._outbox_handlers:
@@ -475,7 +477,7 @@ class AsyncMessageBusABC(abc.ABC):
             except Exception as e:
                 logger.exception(e)
                 await outbox_repo.rollback()
-                failed_ids.append(outbox_message.id)
+                failed_ids.append(outbox_message_id)
 
 
 class MessageBus(MessageBusABC):
@@ -829,6 +831,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
                 break
 
             outbox_message = batch[0]
+            outbox_message_id = outbox_message.id
 
             try:
                 for handler in self._outbox_handlers:
@@ -837,7 +840,7 @@ class AsyncMessageBus(AsyncMessageBusABC):
             except Exception as e:
                 logger.exception(e)
                 await outbox_repo.rollback()
-                failed_ids.append(outbox_message.id)
+                failed_ids.append(outbox_message_id)
 
     async def batch_handle(self, messages: List[Message], *args, **kwargs) -> List:
         """
